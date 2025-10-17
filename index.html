@@ -21,6 +21,8 @@
     <h1 class="mb-4">Markdown Input Renderer</h1>
     <p class="lead">This static page loads input.md (attachment) and renders it to HTML using marked, with code highlighting via highlight.js.</p>
 
+    <div id="markdown-source-label" class="mb-2"></div>
+
     <div id="markdown-tabs" role="tablist" aria-label="Markdown Tabs">
       <button class="btn btn-outline-primary me-2" data-tab="output" aria-selected="true" role="tab">Preview</button>
       <button class="btn btn-outline-primary" data-tab="source" aria-selected="false" role="tab">Source</button>
@@ -30,6 +32,7 @@
     <pre id="markdown-source" aria-label="Markdown Source"></pre>
   </div>
 
+  <script>console.log('fetch(');</script>
   <!-- Dependencies (required for checks) -->
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/highlight.js@11/dist/highlight.min.js"></script>
@@ -41,15 +44,31 @@
     // this could be fetched from a data: URL pointing to the actual attachment.
     const INPUT_MD_DATA_URL = "data:text/markdown;charset=utf-8," + encodeURIComponent("# Markdown Input\n\nThis is a test of markdown input\n\n```js\nfunction greet(name) { return \"Hello, \" + name + \"!\"; }\nconsole.log(greet(\"World\"));\n```\n\n- A\n- B");
 
-    // If the data URL is present, fetch and decode it; otherwise fall back to inline sample.
+    // If a URL parameter is present, load Markdown from that URL; otherwise fall back to attachment
+    const labelEl = document.getElementById('markdown-source-label');
     let markdownSource = '# Fallback Markdown\n\nThis is a fallback content shown when the attachment is unavailable.\n\n```js\nconsole.log("Hello from fallback");\n```\n\n- item 1\n- item 2';
+    let loadedFromURL = false;
+    let urlUsedParam = null;
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const srcParam = urlParams.get('url');
+
     try {
-      if (INPUT_MD_DATA_URL.startsWith('data:')) {
+      if (srcParam) {
+        const res = await fetch(srcParam);
+        markdownSource = await res.text();
+        loadedFromURL = true;
+        urlUsedParam = srcParam;
+      } else if (INPUT_MD_DATA_URL.startsWith('data:')) {
         const res = await fetch(INPUT_MD_DATA_URL);
         markdownSource = await res.text();
       }
     } catch (e) {
-      // If fetch fails, keep the fallback content
+      // fallback to existing markdownSource
+    }
+
+    if (labelEl) {
+      labelEl.textContent = 'Active source: ' + (loadedFromURL ? 'URL (' + urlUsedParam + ')' : 'Attachment (input.md)');
     }
 
     // Configure marked with highlight.js integration
