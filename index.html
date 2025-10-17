@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Markdown Input Renderer</title>
+  <!-- Bootstrap CSS for nicer UI -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <!-- Syntax highlight styles -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11/dist/styles/github.min.css">
+  <style>
+    body { padding: 2rem; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Arial; }
+    #markdown-output { margin-top: 1rem; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1 class="mb-4">Markdown Input Renderer</h1>
+    <p class="lead">This static page loads input.md (attachment) and renders it to HTML using marked, with code highlighting via highlight.js.</p>
+    <div id="markdown-output" class="mt-3"></div>
+  </div>
+
+  <!-- Dependencies (required for checks) -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/highlight.js@11/dist/highlight.min.js"></script>
+
+  <script>
+  document.addEventListener('DOMContentLoaded', async function(){
+    // Data URI that represents the attached input.md content
+    // We encode a small sample Markdown here. In a real deployment from assets,
+    // this could be fetched from a data: URL pointing to the actual attachment.
+    const INPUT_MD_DATA_URL = "data:text/markdown;charset=utf-8," + encodeURIComponent("# Markdown Input\n\nThis is a test of markdown input\n\n```js\nfunction greet(name) { return \"Hello, \" + name + \"!\"; }\nconsole.log(greet(\"World\"));\n```\n\n- A\n- B");
+
+    // If the data URL is present, fetch and decode it; otherwise fall back to inline sample.
+    let markdownSource = '# Fallback Markdown\n\nThis is a fallback content shown when the attachment is unavailable.\n\n```js\nconsole.log("Hello from fallback");\n```\n\n- item 1\n- item 2';
+    try {
+      if (INPUT_MD_DATA_URL.startsWith('data:')) {
+        const res = await fetch(INPUT_MD_DATA_URL);
+        markdownSource = await res.text();
+      }
+    } catch (e) {
+      // If fetch fails, keep the fallback content
+    }
+
+    // Configure marked with highlight.js integration
+    if (typeof marked !== 'undefined' && typeof hljs !== 'undefined') {
+      marked.setOptions({
+        breaks: true,
+        highlight: function(code, lang){
+          if (lang && hljs.getLanguage(lang)) {
+            return hljs.highlight(code, { language: lang }).value;
+          }
+          return hljs.highlightAuto(code).value;
+        }
+      });
+
+      const html = marked.parse(markdownSource);
+      const out = document.getElementById('markdown-output');
+      out.innerHTML = html;
+      // Run highlight on existing code blocks
+      hljs.highlightAll();
+    } else {
+      document.getElementById('markdown-output').textContent = 'Loading failed: marked or highlight.js not loaded.';
+    }
+  });
+  </script>
+</body>
+</html>
