@@ -11,13 +11,23 @@
   <style>
     body { padding: 2rem; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Arial; }
     #markdown-output { margin-top: 1rem; }
+    #markdown-tabs { display: flex; gap: .5rem; align-items: center; margin-bottom: .5rem; }
+    #markdown-source { display: none; white-space: pre-wrap; background: #f8f9fa; padding: .75rem; border: 1px solid #e9ecef; border-radius: .375rem; min-height: 4rem; width: 100%; overflow: auto; }
+    .btn.active { background-color: #0d6efd; color: white; }
   </style>
 </head>
 <body>
   <div class="container">
     <h1 class="mb-4">Markdown Input Renderer</h1>
     <p class="lead">This static page loads input.md (attachment) and renders it to HTML using marked, with code highlighting via highlight.js.</p>
-    <div id="markdown-output" class="mt-3"></div>
+
+    <div id="markdown-tabs" role="tablist" aria-label="Markdown Tabs">
+      <button class="btn btn-outline-primary me-2" data-tab="output" aria-selected="true" role="tab">Preview</button>
+      <button class="btn btn-outline-primary" data-tab="source" aria-selected="false" role="tab">Source</button>
+    </div>
+
+    <div id="markdown-output" class="mt-2"></div>
+    <pre id="markdown-source" aria-label="Markdown Source"></pre>
   </div>
 
   <!-- Dependencies (required for checks) -->
@@ -62,6 +72,61 @@
     } else {
       document.getElementById('markdown-output').textContent = 'Loading failed: marked or highlight.js not loaded.';
     }
+
+    // Sync markdown source into hidden source pane
+    const srcEl = document.getElementById('markdown-source');
+    if (srcEl) srcEl.textContent = markdownSource;
+
+    // Set up tabs
+    const outputPane = document.getElementById('markdown-output');
+    const sourcePane = document.getElementById('markdown-source');
+    const tabButtons = document.querySelectorAll('#markdown-tabs button');
+
+    function renderMarkdown(){
+      // Ensure content is up-to-date in source (markdownSource variable holds latest)
+      if (typeof marked !== 'undefined' && typeof hljs !== 'undefined') {
+        marked.setOptions({
+          breaks: true,
+          highlight: function(code, lang){
+            if (lang && hljs.getLanguage(lang)) {
+              return hljs.highlight(code, { language: lang }).value;
+            }
+            return hljs.highlightAuto(code).value;
+          }
+        });
+        const html = marked.parse(markdownSource);
+        if (outputPane) outputPane.innerHTML = html;
+        if (typeof hljs !== 'undefined') hljs.highlightAll();
+      }
+    }
+
+    // initial render
+    renderMarkdown();
+
+    function setActiveTab(tab){
+       tabButtons.forEach((btn) => {
+          const t = btn.getAttribute('data-tab');
+          const isActive = (t === tab);
+          btn.classList.toggle('active', isActive);
+          btn.setAttribute('aria-selected', String(isActive));
+       });
+       if (tab === 'output') {
+          if (outputPane) outputPane.style.display = '';
+          if (sourcePane) sourcePane.style.display = 'none';
+       } else {
+          if (outputPane) outputPane.style.display = 'none';
+          if (sourcePane) sourcePane.style.display = '';
+       }
+    }
+
+    // default to output visible
+    setActiveTab('output');
+    tabButtons.forEach((btn) => {
+       btn.addEventListener('click', () => {
+          setActiveTab(btn.getAttribute('data-tab'));
+       });
+    });
+
   });
   </script>
 </body>
